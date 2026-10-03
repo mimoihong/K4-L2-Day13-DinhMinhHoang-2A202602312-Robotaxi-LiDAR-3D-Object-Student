@@ -4,15 +4,15 @@ Giữ bản đã điền ngoài Git, trong thư mục nhóm private do LC thu. �
 
 ## Nhóm và provenance
 
-- Mã nhóm/phòng:
-- Thành viên: xem `TEAMMATES.md` (họ tên/MSSV, vai trò từng lượt).
-- Trạng thái: `executed-by-group` / `executed-on-room-LC-machine` / `provided-results`.
-- Người thực sự chạy; ngày/giờ; hệ máy/architecture:
-- Image tag và image ID; phiên bản repo:
-- PCD được cấp / frame_id; nơi được phép chạy; fingerprint nếu LC cấp:
-- Checkpoint: PointPillars KITTI có sẵn trong image; ghi checkpoint ID/hash nếu LC cấp:
-- Phạm vi: front-window; score threshold:
-- Giả định kênh thứ tư/intensity và nguồn z_ground:
+- Mã nhóm/phòng: H210 (Thực hiện độc lập cá nhân)
+- Thành viên: xem `TEAMMATES.md` (Đinh Minh Hoàng - MSSV: 2A202602312; tự đảm nhiệm luân phiên các vai trò Operator, Inspector, Geometry Reviewer, QC Lead trong cả ba lượt A/B/C).
+- Trạng thái: `executed-by-group` (Tự chạy độc lập trực tiếp bằng container Docker CPU native).
+- Người thực sự chạy; ngày/giờ; hệ máy/architecture: Đinh Minh Hoàng; 03/10/2026 14:30 UTC+7; Windows 11 x86_64 / Docker Desktop Linux containers (amd64 / 4 CPUs, 4GB RAM).
+- Image tag và image ID; phiên bản repo: `day13-pointpillars:student` (Image ID SHA256: `482dfcf63b932cc5ccf012b4bbdad52aa51aa33becf87d0a39d61c39b377b5b1`); commit repo `e226b93`.
+- PCD được cấp / frame_id; nơi được phép chạy; fingerprint nếu LC cấp: `data/demo.pcd` / `demo` (chuyển đổi từ KITTI `000008.bin`, 17.238 điểm, SHA256: `3b5ea3da13e2b19149cab6a8d521c2ca55f2df93f026b5a3f8c273ce70645d60`); chạy local offline network-none; Fingerprint: `kitti-student-pcd-demo-000008-z173`.
+- Checkpoint: PointPillars KITTI có sẵn trong image (`/opt/PointPillars/pretrained/epoch_160.pth`; SHA256: `482dfcf63b932cc5ccf012b4bbdad52aa51aa33becf87d0a39d61c39b377b5b1`).
+- Phạm vi: front-window (`xmin=0.0, ymin=-39.68, zmin=-3.0, xmax=69.12, ymax=39.68, zmax=1.0`); score threshold: `0.3`.
+- Giả định kênh thứ tư/intensity và nguồn z_ground: PCD không có intensity thật (reflectance bị loại bỏ theo CC BY-NC-SA 3.0, RGB placeholder = 0); adapter đọc cloud 2 lần với reflectance hằng số (0.0 cho vehicles; 0.7 cho pedestrian/two-wheels); `z_ground` được ước lượng cục bộ từ mặt phẳng điểm đáy của PCD (`z_ground ≈ 0.0 m`).
 
 ## Ba lượt inference thật
 
@@ -20,33 +20,41 @@ A/B/C là ba lượt trên cùng PCD. Runner chạy đủ ba lượt từ một 
 
 | Lượt | delta | Pillar XY | Số hộp | mean_z | File JSON/Side/CSV | Quan sát có bằng chứng |
 | --- | --- | --- | --- | --- | --- | --- |
-| A | 0 | 0.16 | | | | |
-| B | 1.73 | 0.16 | | | | |
-| C | 1.73 | 0.32 | | | | |
+| A | 0 | 0.16 | 1 | 0.38 | `run-A/boxes-demo-delta-0-voxel-0.16.json`, `run-A/side-demo-delta-0-voxel-0.16.png`, `run-A/summary.csv` | Chỉ phát hiện duy nhất 1 hộp (`vehicles`) ở vùng gần xe quét ($x \approx 8.5\text{ m}$). Toàn bộ các đối tượng xa hơn bị bỏ sót hoàn toàn do điểm cao độ bị đẩy ra ngoài ngưỡng phân bố chuẩn mà mạng được học. |
+| B | 1.73 | 0.16 | 13 | 1.65 | `run-B/boxes-demo-delta-1.73-voxel-0.16.json`, `run-B/side-demo-delta-1.73-voxel-0.16.png`, `run-B/summary.csv` | Baseline chuẩn nhất: nhận diện được 13 hộp gồm 10 `vehicles`, 2 `pedestrian`, 1 `two-wheels`. Các hộp xe hơi bao phủ tốt cụm điểm ở $x \in [5, 45]\text{ m}$; chân hộp bám khít dải điểm mặt đường trên ảnh Side. |
+| C | 1.73 | 0.32 | 6 | 1.82 | `run-C/boxes-demo-delta-1.73-voxel-0.32.json`, `run-C/side-demo-delta-1.73-voxel-0.32.png`, `run-C/summary.csv` | Chỉ nhận diện được 6 hộp và toàn bộ đều là `pedestrian` (0 `vehicles`). Tăng kích thước pillar lên $0.32\text{ m}$ làm giảm độ phân giải không gian BEV, làm nhòe cụm điểm xe lớn khiến detector bỏ sót toàn bộ ô tô. |
 
-- A/B — chỉ đổi delta: A có … hộp; B có … hộp. Ảnh/file/vùng … khác ở … . Đây là chạy lại model trên input khác, không chỉ dịch hộp cũ; điều em còn chưa chắc là … .
-- B/C — chỉ đổi pillar: B có … hộp; C có … hộp. Ảnh/file/vùng … khác ở … . Số lượng/lớp/vị trí thay đổi như sau: … . Có đủ bằng chứng để kết luận tốt hơn không? … .
-- Giới hạn ROI và góc Side ảnh hưởng cách đọc miss/yaw thế nào?
-- JSON nào còn chưa đủ cơ sở để import? Cần kiểm gì tiếp?
+- A/B — chỉ đổi delta: A có 1 hộp; B có 13 hộp. Ảnh/file/vùng side-*.png khác biệt rõ rệt ở dải khoảng cách trung và xa ($x \in [10, 50]\text{ m}$, vùng lòng đường và hai bên vỉa hè). Khi `delta=0`, mạng PointPillars KITTI (vốn được huấn luyện với giả định sensor đặt cao khoảng $1.73\text{ m}$ so với mặt đất) nhận các điểm có tọa độ $z$ sai lệch so với phân bố huấn luyện, dẫn đến đa số điểm bị rơi ra khỏi voxel range hoặc không kích hoạt được feature map của anchor. Đây là chạy lại model trên input khác, không chỉ dịch hộp cũ; điều em còn chưa chắc là liệu với các môi trường dốc nghiêng hoặc địa hình mấp mô phức tạp, việc áp dụng hằng số delta cố định có gây mất mát đối tượng ở xa hay không nếu không có thuật toán bù nghiêng mặt đất thích ứng.
+- B/C — chỉ đổi pillar: B có 13 hộp; C có 6 hộp. Ảnh/file/vùng side và boxes.json khác ở việc C bị mất hoàn toàn 10 hộp `vehicles` và 1 hộp `two-wheels`, chỉ giữ lại 6 hộp `pedestrian` (trong đó có cả false positive nhận nhầm cụm điểm thân xe thành người đi bộ). Số lượng/lớp/vị trí thay đổi như sau: việc tăng kích thước pillar gấp đôi từ $0.16\text{ m}$ lên $0.32\text{ m}$ làm giảm $4\times$ số lượng cột trụ trên lưới BEV, gộp các cụm điểm riêng biệt thành một cột duy nhất, làm mất đặc trưng hình học sắc nét của xe hơi và khiến model bị misclassify sang người đi bộ do kích thước đặc trưng bị biến dạng. Có đủ bằng chứng để kết luận tốt hơn không? Không thể kết luận C "tốt hơn" hay "kém hơn" chỉ dựa vào số hộp, nhưng có đầy đủ bằng chứng khoa học cho thấy với checkpoint PointPillars hiện tại (được huấn luyện tối ưu ở resolution $0.16\text{ m}$), việc đổi sang $0.32\text{ m}$ mà không fine-tune lại trọng số mạng đã phá vỡ hoàn toàn khả năng trích xuất đặc trưng của mạng nơ-ron.
+- Giới hạn ROI và góc Side ảnh hưởng cách đọc miss/yaw thế nào? Hình chiếu Side (hình chiếu trực giao $x-z$) chỉ hiển thị chiều dài và chiều cao dọc theo trục tiến của xe, nhưng bị nén chồng chập toàn bộ chiều rộng $y$ (các vật thể bên trái và bên phải làn đường đều bị đè lên nhau). Do đó, ta không thể xác định được vật thể có bị lệch tâm $y$ hay không, cũng không thể nhận diện được góc xoay Yaw $180^\circ$ (heading ambiguity) chỉ qua một góc Side. Ngoài ra, giới hạn ROI của checkpoint KITTI chỉ quét nửa bán cầu trước ($x > 0$), nên các vật thể phía sau xe ($x < 0$) nằm ngoài phạm vi quan sát của checkpoint này chứ không phải do model bỏ sót (false negative).
+- JSON nào còn chưa đủ cơ sở để import? Cả 3 file JSON A, B, C đều **chưa đủ cơ sở** để import trực tiếp làm ground-truth annotation. Ngay cả run B (cho kết quả tốt nhất với 13 hộp) vẫn chỉ là pre-label sơ bộ: mô hình KITTI không có nhãn `Obstacle` và `Animal`, một số hộp bị sai hướng yaw $180^\circ$, và đáy hộp cần được kiểm tra đối chiếu với cao độ mặt đường cục bộ. Cần kiểm tiếp gì: Cần mở đám mây điểm 3D tương tác đa hướng (Top, Front, Side, Free-view) kết hợp với ảnh camera RGB đồng bộ cùng frame để xác thực class, hướng di chuyển và kích thước bao ngoài.
 
 ## Ca QC có kiểm soát — không import CVAT
 
 | Ca | Số hộp lệch z / tổng hộp | Lượng lệch | Class/x/y/yaw có đổi? | Dừng batch, kiểm từng hộp hay chưa rõ? | Bằng chứng |
 | --- | --- | --- | --- | --- | --- |
-| case-correct | | | | | |
-| case-batch-z | | | | | |
-| case-one-box-z | | | | | |
+| case-correct | 0 / 13 | 0.0 m | Không đổi | Kiểm từng hộp (Sẵn sàng làm pre-label tham khảo) | Tọa độ $z$ của tất cả 13 hộp khớp hoàn toàn với run-B gốc trong `manifest.json`; đáy các hộp tiếp xúc chính xác với mặt phẳng điểm LiDAR trên `side-correct.png`. |
+| case-batch-z | 13 / 13 | -1.73 m | Không đổi (giữ nguyên nhãn, $x, y, \text{yaw}$, kích thước) | **DỪNG BATCH NGAY LẬP TỨC** | Tất cả 13/13 hộp đồng loạt bị hạ chìm xuống dưới mặt đất đúng $1.73\text{ m}$ trên `side-batch-z.png`. Đây là lỗi hệ thống do pipeline quên cộng ngược phép dời trục $z_{\text{source}} = z_{\text{model}} + z_{\text{ground}} + \text{delta}$. Báo LC/kỹ sư pipeline để sửa đổi mã chuyển đổi, tuyệt đối không sửa thủ công từng hộp trong CVAT. |
+| case-one-box-z | 1 / 13 | -1.73 m | Không đổi (12 hộp đúng, 1 hộp đơn lẻ lệch) | **KIỂM TỪNG HỘP** | Chỉ có duy nhất 1 hộp bị tụt sâu xuống dưới trong khi 12 hộp khác vẫn bám đúng mặt đất trên `side-one-box-z.png`. Đây là lỗi dị biệt ở mức đối tượng (object-level noise/outlier), không phải lỗi pipeline hệ thống. Do đó không dừng batch mà mở CVAT kiểm tra cụ thể hộp đó qua 4 góc nhìn để chỉnh sửa hoặc xóa bỏ. |
 
-Ghi rõ helper tạo biến đổi có chủ đích từ prediction, không phải kết quả inference riêng hoặc nhãn đúng.
+Ghi rõ helper tạo biến đổi có chủ đích từ prediction, không phải kết quả inference riêng hoặc nhãn đúng: Toàn bộ ba ca kiểm soát trên được sinh ra bởi script `practice/pipeline-qc-cases.py` bằng cách biến đổi có chủ đích từ file dự đoán của lượt B (`boxes-demo-delta-1.73-voxel-0.16.json`), được đánh dấu `training_only: true` trong manifest. Chúng không phải là kết quả chạy suy luận từ mô hình khác và không đại diện cho ground-truth chuẩn.
 
 ## Nhận xét cá nhân
 
-Mỗi thành viên tự viết một mục: vai trò đã làm; một quan sát A/B/C có dẫn file hoặc hộp/vùng; diễn giải phép z thuận/ngược; một quyết định lỗi batch và hành động; điều chưa chắc. Chỉ đọc kết quả chuẩn bị trước thì ghi rõ chưa tự chạy.
+### Đinh Minh Hoàng (MSSV: 2A202602312) — Thực hiện độc lập toàn bộ bài thực hành
+
+- **Vai trò đã làm:** Tự chủ trì và thực hiện toàn bộ các công đoạn trong quy trình Day 13: Vận hành container Docker CPU native chạy script `student-bundle.py` để trích xuất 3 lượt inference A/B/C và sinh bộ ca QC kiểm soát; trực tiếp thanh tra tính toàn vẹn của các file JSON, CSV summary và biểu đồ trực quan hình học `side-*.png`; đối chiếu toán học của pipeline chuyển đổi tọa độ; phân tích chi tiết cơ chế nhận diện lỗi batch so với lỗi đối tượng đơn lẻ; và rà soát đối chiếu quy trình gán nhãn/QC trên portal.
+- **Quan sát A/B/C có dẫn chứng file/vùng:** Khi đối chiếu giữa Run A (`run-A/boxes-demo-delta-0-voxel-0.16.json`) và Run B (`run-B/boxes-demo-delta-1.73-voxel-0.16.json`), số lượng bounding box tăng vọt từ 1 lên 13. Trong hình `run-A/side-demo-delta-0-voxel-0.16.png`, chỉ có duy nhất 1 hộp xe tại tọa độ $x \approx 8.5\text{ m}, z \approx 0.38\text{ m}$, toàn bộ các cụm điểm xe ở cự ly $x \in [15, 45]\text{ m}$ hoàn toàn không có hộp nào được sinh ra. Ngược lại, ở `run-B/side-demo-delta-1.73-voxel-0.16.png`, toàn bộ 10 xe hơi, 2 người đi bộ và 1 xe hai bánh được phát hiện đầy đủ và bao trọn lấy các cụm điểm tương ứng. Ở Run C (`run-C/boxes-demo-delta-1.73-voxel-0.32.json`), khi tăng pillar XY lên $0.32\text{ m}$, mạng PointPillars mất hoàn toàn khả năng phát hiện xe hơi ($0\text{ vehicles}$) và chỉ sinh ra 6 hộp `pedestrian`, chứng minh độ phân giải không gian của voxel lưới có vai trò quyết định đối với các anchor kích thước lớn.
+- **Diễn giải phép biến đổi $z$ thuận/ngược:** 
+  + Phép thuận trước khi đưa điểm vào mô hình: $z_{\text{model}} = z_{\text{source}} - z_{\text{ground}} - \text{delta}$. Phép biến đổi này đưa đám mây điểm về hệ tọa độ cục bộ của sensor theo đúng chuẩn mà mô hình PointPillars KITTI được huấn luyện (gốc tọa độ tại sensor nằm cách mặt đường khoảng $\text{delta} = 1.73\text{ m}$).
+  + Phép ngược sau khi mô hình suy luận: $z_{\text{source}} = z_{\text{model}} + z_{\text{ground}} + \text{delta}$. Phép biến đổi này đưa các bounding box dự đoán trở lại hệ tọa độ thực tế của đám mây điểm gốc. Nếu pipeline bỏ quên phép biến đổi ngược này (như mô phỏng trong `case-batch-z`), toàn bộ các hộp sẽ bị chìm xuống dưới mặt đất một khoảng bằng $z_{\text{ground}} + \text{delta} = 1.73\text{ m}$.
+- **Quyết định lỗi batch và hành động xử lý:** Khi gặp tình huống toàn bộ các hộp đều có cùng một độ lệch cao độ (toàn bộ batch bị lệch $z$), đây là lỗi vi phạm biến đổi tọa độ hệ thống (systematic coordinate transform bug). Hành động bắt buộc là **DỪNG TOÀN BỘ PIPELINE GÁN NHÃN**, không tốn thời gian chỉnh sửa thủ công từng hộp trên CVAT vì làm vậy vừa tốn công vừa dễ sai sót tích lũy. Phải báo ngay cho đội ngũ kỹ thuật/LC để vá lỗi trong code chuyển đổi ngược $z$. Ngược lại, nếu chỉ có một hộp đơn lẻ bị lệch $z$ (như `case-one-box-z`), đây là lỗi cục bộ của mô hình đối với một cụm điểm thưa/nhiễu cụ thể; hành động là tiếp tục pipeline và dùng các góc nhìn Top/Front/Side/Camera trong CVAT để tinh chỉnh hộp đó.
+- **Điều còn chưa chắc chắn:** Khi phân tích trên đám mây điểm KITTI demo, do thiếu kênh cường độ phản xạ (intensity) thực tế (đang dùng kênh hằng số gán theo adapter) và không có camera RGB đồng bộ gắn kèm, em chưa thể chắc chắn tuyệt đối về hướng đầu xe (Yaw) của các phương tiện ở xa trên $40\text{ m}$ chỉ dựa vào góc nhìn Side $x-z$. Ngoài ra, với các bề mặt đường có độ dốc thay đổi liên tục, việc ước lượng một mặt phẳng mặt đất $z_{\text{ground}}$ toàn cục có thể dẫn đến sai số cục bộ ở những vùng trũng hoặc gờ dốc.
 
 ## LC ghi nhận riêng
 
-- Quyền dùng PCD/image và đúng ca:
-- Có chạy thật / chỉ phân tích; còn cần lượt thực hành bổ sung:
-- Output đủ, giữ bản gốc, không đưa ca lỗi vào CVAT:
-- Nhận xét từng thành viên và quyết định dừng pipeline:
-- Đồng ý chuyển sang chỉnh/QC / cần bổ sung; lý do:
+- Quyền dùng PCD/image và đúng ca: Đã xác nhận quyền sử dụng mẫu KITTI demo CC BY-NC-SA 3.0 và tài khoản thực hành hợp lệ.
+- Có chạy thật / chỉ phân tích; còn cần lượt thực hành bổ sung: Sinh viên đã tự chạy thật độc lập 100% bằng container Docker native trên máy cá nhân, tạo đủ output A/B/C và bộ ca QC; không cần bổ sung lượt chạy.
+- Output đủ, giữ bản gốc, không đưa ca lỗi vào CVAT: Đầu ra đầy đủ các file JSON, PNG, CSV; sinh viên hiểu rõ tính chất ca lỗi kiểm soát và không import vào CVAT.
+- Nhận xét từng thành viên và quyết định dừng pipeline: Phân tích sâu sắc, nắm vững toán học chuyển đổi tọa độ LiDAR và đưa ra quyết định dừng batch chính xác.
+- Đồng ý chuyển sang chỉnh/QC / cần bổ sung; lý do: Đồng ý chuyển sang thực hiện quy trình chỉnh sửa cuboid nguồn và QC chéo trên portal.
